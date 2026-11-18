@@ -1,20 +1,20 @@
-# Project Infinity-X Android 17 — Pixel 3 (blueline)
+# Infinity-X Android 17 for Google Pixel 3 (blueline)
 
-Unofficial Infinity-X device port by Hecker, based on the LineageOS 24.0
-Pixel 3 hardware configuration which has booted successfully.
+This port is rebased on the current **LineageOS 24.0 hardware sources**, not the
+old experimental Infinity-X port. The three mirrors are intentionally replaced,
+including deletion of old-only files. The only device-tree differences are
+`AndroidProducts.mk` and the new `infinity_blueline.mk`, which is derived
+from the original `lineage_blueline.mk` with ROM build-target substitution.
+The kernel tree is a verbatim LineageOS snapshot. The vendor tree is a
+LineageOS snapshot except for removing `.lfsconfig` so blobs can be stored on GitHub LFS.
+GitHub workflow metadata is separate from ROM source.
 
-## Source repositories
-- [Device tree](https://github.com/its-hecker/infinity-blueline-devicetree)
-- [Kernel](https://github.com/its-hecker/infinity-blueline-kernel)
-- [Vendor](https://github.com/its-hecker/infinity-blueline-vendor)
-- [Local manifest](https://github.com/its-hecker/infinity-blueline-localmanifest)
+## Exact LineageOS branch heads used
+- Device: `its-hecker/android_device_google_crosshatch` `lineage-24.0` at `f30f51da5b8f9a50d031f409b96b5d4a2eb35d68`
+- Kernel: `its-hecker/android_kernel_google_msm-4.9` `lineage-24.0` at `484dddd90e130900b4f0cf0ccb5b148b263f7fb4`
+- Vendor: `its-hecker/proprietary_vendor_google_blueline` `lineage-24.0` at `21b4fe5e00a992900436c56821916f6a056550a6`
 
-The three source repositories use automated GitHub Actions importers to copy
-the known LineageOS-based Infinity-X port. Verify they have imported actual
-source files before starting a sync. The imported trees preserve the existing
-Pixel 3 Android 17 SELinux, legacy gralloc, Citadel and compatibility changes.
-
-## New ServerHive checkout
+## Build
 
 ```bash
 mkdir -p ~/infinityx-blueline
@@ -25,25 +25,22 @@ repo sync -c --fail-fast --no-clone-bundle --no-tags -j4
 USE_RBE=true WITH_GAPPS=true PIXEL3_GAPPS_LITE=true PIXEL3_DEV_USB_ADB=true bash .repo/local_manifests/build.sh
 ```
 
-This produces an integrated-GApps ROM, not a separate GApps ZIP. The reduced
-profile omits optional Pixel ThemePicker and Sounds makefile includes but keeps
-the upstream vendor/pixel/gms/products/gms.mk. **It is not a bare Play
-Services + Play Store bundle:** upstream GMS may include additional Pixel apps
-and its final image size must be checked before flashing. Full upstream GApps:
-set `PIXEL3_GAPPS_LITE=false`. Vanilla: `WITH_GAPPS=false`.
+GApps are **integrated**, using Infinity-X's `vendor/pixel/gms/products/gms.mk`
+while the helper omits optional Pixel ThemePicker and Pixel Sounds. The core GMS
+makefile may include more apps than Play Services and Play Store: this has not
+yet been verified to be the smallest possible GApps set.
+`WITH_GAPPS=false` builds without GApps.
 
-Run `bash .repo/local_manifests/build.sh --check` to verify paths after sync.
-`--prepare-only` applies the already proven vendor fixups and reduces GApps,
-without running a build. The script checks the generated kernel SELinux
-configuration, Qualcomm HWC packaging, and uevent permissions.
+The local manifest matches the LineageOS 24.0 build dependencies, including
+the **same xbill9 system/core, vold, bpf, zygote and Connectivity forks**,
+plus pinned legacy SDM845 audio, display, GPS and GNU kernel toolchains.
+Those changes are boot-critical for the legacy Pixel 3 on Android 17.
 
-Development builds default to early root USB ADB to capture boot failures.
-**Do not distribute with `PIXEL3_DEV_USB_ADB=true`.** Set it to false for
-secure userdebug builds; avoid reusing this debug product unchanged for a
-public release.
+`--check` checks preconditions; `--prepare-only` runs the vendor fixup and
+the GApps trim without compilation. Userdebug is used for initial development.
+The port keeps LineageOS's device init/USB setup unchanged; secure releases
+must disable `PIXEL3_DEV_USB_ADB` and verify actual ro.adb.secure settings.
 
-Booting LineageOS does not establish that Infinity-X boots. The combined ROM,
-Google services, file-based encryption, first boot, Wi-Fi, calls, camera and
-partition size must still be verified on the Pixel 3.
-
-Credits: Project Infinity-X, LineageOS, Google device maintainers, xbill9.
+**Status:** source rebasing and GitHub CI validation do not demonstrate an
+Infinity-X image compiles or boots. Test the phone, data decryption, camera,
+Wi-Fi, telephony, and fixed legacy partition sizes before distributing.
