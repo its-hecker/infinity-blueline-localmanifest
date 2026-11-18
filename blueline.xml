@@ -3,9 +3,9 @@
 <manifest>
   <remote name="pixel3" fetch="https://github.com/" />
 
-  <project name="its-hecker/infinity-blueline-devicetree" path="device/google/crosshatch" remote="pixel3" revision="main" />
-  <project name="its-hecker/infinity-blueline-kernel" path="kernel/google/msm-4.9" remote="pixel3" revision="main" />
-  <project name="its-hecker/infinity-blueline-vendor" path="vendor/google/blueline" remote="pixel3" revision="main" />
+  <project name="its-hecker/infinity-blueline-devicetree" path="device/google/crosshatch" remote="pixel3" revision="d0fe9fabb8195270184bcc04364cb4e38bf9ae7d" upstream="refs/heads/main" />
+  <project name="its-hecker/infinity-blueline-kernel" path="kernel/google/msm-4.9" remote="pixel3" revision="475345fc15c6fc59e978f70e0af73076b4788d35" />
+  <project name="its-hecker/infinity-blueline-vendor" path="vendor/google/blueline" remote="pixel3" revision="da5e444c8260fc1d2509ccf314d80399db54e618" />
   <project name="LineageOS/android_packages_apps_ElmyraService" path="packages/apps/ElmyraService" remote="pixel3" revision="lineage-24.0" />
 
   <!-- Legacy Qualcomm implementations removed from the Android 17 manifest. -->
