@@ -75,6 +75,7 @@ if [[ "$MODE" == --check ]]; then
 fi
 
 python3 "$SCRIPT_DIR/scripts/prepare-camera-fd.py" "$TOP"
+python3 "$SCRIPT_DIR/scripts/prepare-camera-jni.py" "$TOP"
 python3 "$SCRIPT_DIR/scripts/prepare-vendor.py" "$TOP"
 if [[ "$WITH_GAPPS" == true && "$PIXEL3_GAPPS_LITE" == true ]]; then
     python3 "$SCRIPT_DIR/scripts/trim-gapps.py" "$TOP"

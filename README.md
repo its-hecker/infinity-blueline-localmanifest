@@ -15,6 +15,13 @@ The build helper applies an idempotent compatibility fix to Infinity-X's
 (`0x100`) before compilation. This preserves Infinity-X's FD callback behavior
 without modifying the LineageOS-derived device, kernel, or vendor mirrors.
 
+The build helper also runs `scripts/prepare-camera-jni.py`, an idempotent
+Android 17 compatibility fix for obsolete Qualcomm camera JNI fields and commands.
+It guards optional extended face fields with C++20 detection (returning zero when
+unavailable), and retains historical command IDs. It does not change the
+camera_face_t ABI, device, kernel, vendor, or LineageOS boot dependencies.
+The JNI patch is syntax-tested but the full ROM build and on-device behavior are unverified.
+
 ## Exact LineageOS branch heads used
 - Device: `its-hecker/android_device_google_crosshatch` `lineage-24.0` at `f30f51da5b8f9a50d031f409b96b5d4a2eb35d68`
 - Kernel: `its-hecker/android_kernel_google_msm-4.9` `lineage-24.0` at `484dddd90e130900b4f0cf0ccb5b148b263f7fb4`
