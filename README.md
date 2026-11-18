@@ -9,6 +9,12 @@ The kernel tree is a verbatim LineageOS snapshot. The vendor tree is a
 LineageOS snapshot except for removing `.lfsconfig` so blobs can be stored on GitHub LFS.
 GitHub workflow metadata is separate from ROM source.
 
+
+The build helper applies an idempotent compatibility fix to Infinity-X's
+`frameworks/av/camera/ICameraClient.cpp` for the legacy camera preview FD marker
+(`0x100`) before compilation. This preserves Infinity-X's FD callback behavior
+without modifying the LineageOS-derived device, kernel, or vendor mirrors.
+
 ## Exact LineageOS branch heads used
 - Device: `its-hecker/android_device_google_crosshatch` `lineage-24.0` at `f30f51da5b8f9a50d031f409b96b5d4a2eb35d68`
 - Kernel: `its-hecker/android_kernel_google_msm-4.9` `lineage-24.0` at `484dddd90e130900b4f0cf0ccb5b148b263f7fb4`
