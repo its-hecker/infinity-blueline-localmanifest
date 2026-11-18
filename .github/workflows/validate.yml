@@ -26,14 +26,18 @@ jobs:
           paths = [item.attrib["path"] for item in projects]
           assert len(paths) == len(set(paths)), "duplicate local manifest project paths"
           for key in ("device/google/crosshatch", "kernel/google/msm-4.9", "vendor/google/blueline",
-                      "system/vold", "system/bpf", "system/zygote"):
+                      "system/core", "system/vold", "system/bpf", "system/zygote", "packages/modules/Connectivity"):
               assert key in paths, f"missing {key}"
           names = {p.attrib['path']: p.attrib['name'] for p in projects}
           assert names['system/vold'] == 'xbill9/android_system_vold'
           removed = [p.attrib.get('name') for p in root.findall('remove-project')]
-          assert 'system_vold' in removed, "Infinity upstream system_vold must be removed first"
+          assert 'system_vold' in removed and 'system_core' in removed and 'packages_modules_Connectivity' in removed
           assert 'LineageOS/android_system_bpf' in removed
           assert 'platform/system/zygote' in removed
+          expected = {'system/core':'5742820aad0e0c23dc295b22b655e986b87a7fc4', 'system/vold':'fce7dadf6510b8ac728eca0f77672daa582e2bb8', 'system/bpf':'72b37ef9d9dba32ddddcd6bb62970c4cb9f42523', 'system/zygote':'d6dadb5e56c821e8dd44b13725d9de6e3085c733', 'packages/modules/Connectivity':'5c298deab55ce7cfefec3b1cc9c79e9898f669e7'}
+          for path,sha in expected.items():
+              p=next(p for p in projects if p.get('path')==path)
+              assert p.get('revision')==sha, f'wrong boot-verified Lineage compatibility pin: {path}'
           print(f"Manifest XML: PASS ({len(projects)} projects; legacy-fscrypt vold pinned)")
           PY
           bash -n build.sh
