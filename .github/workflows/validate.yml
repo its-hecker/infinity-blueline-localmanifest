@@ -1,0 +1,41 @@
+name: Validate Infinity-X Pixel 3 manifest and scripts
+on:
+  push:
+    paths:
+      - 'blueline.xml'
+      - 'build.sh'
+      - 'scripts/**'
+      - '.github/workflows/validate.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate XML, build script and Python syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          root = ET.parse("blueline.xml").getroot()
+          assert root.tag == "manifest"
+          projects = root.findall("project")
+          paths = [item.attrib["path"] for item in projects]
+          assert len(paths) == len(set(paths)), "duplicate local manifest project paths"
+          for key in ("device/google/crosshatch", "kernel/google/msm-4.9", "vendor/google/blueline",
+                      "system/vold", "system/bpf", "system/zygote"):
+              assert key in paths, f"missing {key}"
+          names = {p.attrib['path']: p.attrib['name'] for p in projects}
+          assert names['system/vold'] == 'xbill9/android_system_vold'
+          removed = [p.attrib.get('name') for p in root.findall('remove-project')]
+          assert 'system_vold' in removed, "Infinity upstream system_vold must be removed first"
+          assert 'LineageOS/android_system_bpf' in removed
+          assert 'platform/system/zygote' in removed
+          print(f"Manifest XML: PASS ({len(projects)} projects; legacy-fscrypt vold pinned)")
+          PY
+          bash -n build.sh
+          python3 -m py_compile scripts/prepare-vendor.py scripts/check-kernel-config.py scripts/trim-gapps.py
+          echo "Bash and Python syntax: PASS"
