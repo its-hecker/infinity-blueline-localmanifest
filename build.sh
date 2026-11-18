@@ -19,6 +19,22 @@ if [[ ! -f build/envsetup.sh ]]; then
 fi
 TOP=$(pwd -P)
 
+# Set and validate build flags before any vendor modifications.
+export USE_RBE=${USE_RBE:-true}
+export WITH_GAPPS=${WITH_GAPPS:-true}
+export PIXEL3_GAPPS_LITE=${PIXEL3_GAPPS_LITE:-true}
+export PIXEL3_DEV_USB_ADB=${PIXEL3_DEV_USB_ADB:-true}
+INFINITY_BUILD_VARIANT=${INFINITY_BUILD_VARIANT:-userdebug}
+case "$WITH_GAPPS:$PIXEL3_GAPPS_LITE:$PIXEL3_DEV_USB_ADB" in
+  true:true:true|true:true:false|true:false:true|true:false:false|false:true:true|false:true:false|false:false:true|false:false:false) ;;
+  *) echo "WITH_GAPPS, PIXEL3_GAPPS_LITE, PIXEL3_DEV_USB_ADB must be true or false" >&2; exit 2 ;;
+esac
+case "$INFINITY_BUILD_VARIANT" in
+  eng|userdebug) ;;
+  *) echo "INFINITY_BUILD_VARIANT must be eng or userdebug" >&2; exit 2 ;;
+esac
+export INFINITY_BUILD_VARIANT
+
 required=(
     device/google/crosshatch/infinity_blueline.mk
     vendor/infinity/config/common_full_phone.mk
@@ -49,8 +65,8 @@ if (( missing )); then
     echo "Complete repo sync with blueline.xml before building." >&2
     exit 1
 fi
-if [[ -n ${INFINITY_BUILD_JOBS:-} && ! ${LINEAGE_BUILD_JOBS} =~ ^[1-9][0-9]*$ ]]; then
-    echo "LINEAGE_BUILD_JOBS must be a positive integer, or unset for default jobs." >&2
+if [[ -n ${INFINITY_BUILD_JOBS:-} && ! ${INFINITY_BUILD_JOBS} =~ ^[1-9][0-9]*$ ]]; then
+    echo "INFINITY_BUILD_JOBS must be a positive integer, or unset for default jobs." >&2
     exit 2
 fi
 if [[ "$MODE" == --check ]]; then
@@ -66,29 +82,19 @@ if [[ "$MODE" == --prepare-only ]]; then
     exit 0
 fi
 
-# Reuse ServerHive's existing RBE configuration and credentials.
-export USE_RBE=true
-export WITH_GAPPS=${WITH_GAPPS:-true}
-export PIXEL3_GAPPS_LITE=${PIXEL3_GAPPS_LITE:-true}
-export PIXEL3_DEV_USB_ADB=${PIXEL3_DEV_USB_ADB:-true}
-case "$WITH_GAPPS:$PIXEL3_GAPPS_LITE:$PIXEL3_DEV_USB_ADB" in
-  true:true:true|true:true:false|true:false:true|true:false:false|false:true:true|false:true:false|false:false:true|false:false:false) ;;
-  *) echo "WITH_GAPPS, PIXEL3_GAPPS_LITE, PIXEL3_DEV_USB_ADB must be true or false" >&2; exit 2 ;;
-esac
-INFINITY_BUILD_VARIANT=${LINEAGE_BUILD_VARIANT:-eng}
-case "$LINEAGE_BUILD_VARIANT" in eng|userdebug) ;; *) echo "Use eng or userdebug for diagnostics" >&2; exit 2 ;; esac
+# ServerHive's RBE configuration and credentials remain in effect.
 mkdir -p out/build-logs
 BUILD_LOG="$TOP/out/build-logs/infinity-blueline-$(date -u +%Y%m%d-%H%M%S).log"
 echo "Build log: $BUILD_LOG"
 (
     # Android's envsetup scripts are not compatible with nounset.
     source build/envsetup.sh
-    lunch infinity_blueline cp2a "$LINEAGE_BUILD_VARIANT"
+    lunch infinity_blueline cp2a "$INFINITY_BUILD_VARIANT"
     # Validate the resolved Kconfig before compiling or packaging the kernel.
     m kernelconfig
     python3 "$SCRIPT_DIR/scripts/check-kernel-config.py" "$ANDROID_PRODUCT_OUT/obj/KERNEL_OBJ/.config"
-    if [[ -n ${LINEAGE_BUILD_JOBS:-} ]]; then
-        m bacon "-j${LINEAGE_BUILD_JOBS}"
+    if [[ -n ${INFINITY_BUILD_JOBS:-} ]]; then
+        m bacon "-j${INFINITY_BUILD_JOBS}"
     else
         # Let Android choose its default parallelism; no fixed -j8 cap.
         m bacon
