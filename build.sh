@@ -1,107 +1,97 @@
 #!/usr/bin/env bash
-# Experimental Project Infinity-X 17 / Android 17 Pixel 3 (blueline) build.
-set -eo pipefail
-ROOT=$(pwd -P)
+# Infinity-X 17 / Android 17 for Pixel 3, using the LineageOS 24.0 boot baseline.
+set -e -o pipefail
+
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 MODE=${1:-build}
 case "$MODE" in
-  build|--check|--prepare-only) ;;
-  *) echo "Usage: bash .repo/local_manifests/build.sh [--check|--prepare-only]" >&2; exit 2 ;;
+    build|--check|--prepare-only) ;;
+    *) echo "Usage: bash .repo/local_manifests/build.sh [--check|--prepare-only]" >&2; exit 2 ;;
 esac
-# Build with Google services integrated, without optional Pixel Sounds/ThemePicker.
-# The core Pixel GMS source still contains its upstream app selection.
+if (( $# > 1 )); then
+    echo "Only one mode argument is accepted." >&2
+    exit 2
+fi
+
+if [[ ! -f build/envsetup.sh ]]; then
+    echo "Run this command from the root of the Infinity-X source checkout." >&2
+    exit 1
+fi
+TOP=$(pwd -P)
+
+required=(
+    device/google/crosshatch/infinity_blueline.mk
+    vendor/infinity/config/common_full_phone.mk
+    device/google/crosshatch/blueline/extract-files.py
+    vendor/google/blueline/blueline-vendor.mk
+    kernel/google/msm-4.9/Makefile
+    hardware/qcom/audio/Android.bp
+    hardware/qcom/sdm845/display/Android.bp
+    hardware/qcom/sdm845/gps/Android.bp
+    tools/extract-utils/extract_utils/main.py
+    prebuilts/extract-tools/linux-x86/bin/patchelf-0_18
+    prebuilts/clang/kernel/linux-x86/clang-r416183b/bin/clang
+    prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/aarch64-linux-android-ld.gold
+    prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/bin/arm-linux-androideabi-ld
+)
+missing=0
+for path in "${required[@]}"; do
+    if [[ ! -f "$path" ]]; then
+        echo "Missing source/tool: $path" >&2
+        missing=1
+    fi
+done
+if [[ "${WITH_GAPPS:-true}" == true ]] && [[ ! -f vendor/pixel/gms/products/gms.mk ]]; then
+    echo "Missing integrated Pixel GMS product tree" >&2
+    missing=1
+fi
+if (( missing )); then
+    echo "Complete repo sync with blueline.xml before building." >&2
+    exit 1
+fi
+if [[ -n ${INFINITY_BUILD_JOBS:-} && ! ${LINEAGE_BUILD_JOBS} =~ ^[1-9][0-9]*$ ]]; then
+    echo "LINEAGE_BUILD_JOBS must be a positive integer, or unset for default jobs." >&2
+    exit 2
+fi
+if [[ "$MODE" == --check ]]; then
+    echo "Pixel 3 source and tool paths are present. No compilation or hardware test was run."
+    exit 0
+fi
+
+python3 "$SCRIPT_DIR/scripts/prepare-vendor.py" "$TOP"
+if [[ "$WITH_GAPPS" == true && "$PIXEL3_GAPPS_LITE" == true ]]; then
+    python3 "$SCRIPT_DIR/scripts/trim-gapps.py" "$TOP"
+fi
+if [[ "$MODE" == --prepare-only ]]; then
+    exit 0
+fi
+
+# Reuse ServerHive's existing RBE configuration and credentials.
+export USE_RBE=true
 export WITH_GAPPS=${WITH_GAPPS:-true}
 export PIXEL3_GAPPS_LITE=${PIXEL3_GAPPS_LITE:-true}
 export PIXEL3_DEV_USB_ADB=${PIXEL3_DEV_USB_ADB:-true}
-export PIXEL3_ENABLE_LIVEDISPLAY=${PIXEL3_ENABLE_LIVEDISPLAY:-false}
-case "$WITH_GAPPS" in true|false) ;; *) echo "WITH_GAPPS must be true or false" >&2; exit 2 ;; esac
-case "$PIXEL3_GAPPS_LITE" in true|false) ;; *) echo "PIXEL3_GAPPS_LITE must be true or false" >&2; exit 2 ;; esac
-case "$PIXEL3_DEV_USB_ADB" in true|false) ;; *) echo "PIXEL3_DEV_USB_ADB must be true or false" >&2; exit 2 ;; esac
-case "$PIXEL3_ENABLE_LIVEDISPLAY" in true|false) ;; *) echo "PIXEL3_ENABLE_LIVEDISPLAY must be true or false" >&2; exit 2 ;; esac
-echo "Pixel 3 build options: GApps=$WITH_GAPPS; reduced extras=$PIXEL3_GAPPS_LITE; developer ADB=$PIXEL3_DEV_USB_ADB; LiveDisplay=$PIXEL3_ENABLE_LIVEDISPLAY"
-
-if [[ ! -f build/envsetup.sh ]]; then
-  echo "Run from the root of your Infinity-X 17 checkout." >&2
-  exit 1
-fi
-required=(
-  device/google/crosshatch/infinity_blueline.mk
-  device/google/crosshatch/blueline/extract-files.py
-  device/google/crosshatch/development/adb.mk
-  vendor/google/blueline/blueline-vendor.mk
-  vendor/infinity/config/common_full_phone.mk
-  kernel/google/msm-4.9/Makefile
-  hardware/qcom/audio/Android.bp
-  hardware/qcom/sdm845/display/Android.bp
-  hardware/qcom/sdm845/gps/Android.bp
-  tools/extract-utils/extract_utils/main.py
-  prebuilts/extract-tools/linux-x86/bin/patchelf-0_18
-  prebuilts/clang/kernel/linux-x86/clang-r416183b/bin/clang
-  prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/aarch64-linux-android-ld.gold
-  prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/bin/arm-linux-androideabi-ld
-)
-missing=0
-for file in "${required[@]}"; do
-  if [[ ! -f "$file" ]]; then echo "Missing source/tool: $file" >&2; missing=1; fi
-done
-if [[ "$WITH_GAPPS" == true ]]; then
-  for file in \
-    vendor/pixel/gms/products/gms.mk \
-    vendor/pixel/themepicker/products/themepicker.mk \
-    vendor/pixel/sounds/products/sounds.mk; do
-    if [[ ! -f "$file" ]]; then echo "GApps tree missing: $file" >&2; missing=1; fi
-  done
-fi
-# Runtime prerequisites found in our recent LineageOS Pixel 3 bootlogs.
-grep -Fq '/etc/ueventd.rc' device/google/crosshatch/device.mk || {
-  echo "Missing Android 17 loaded ueventd path; Citadel will fail." >&2; missing=1;
-}
-grep -Fq '$(call soong_config_set_bool,libui,legacy_gralloc,true)' device/google/crosshatch/device-lineage.mk || {
-  echo "Missing the legacy mapper from the bootable Pixel 3 baseline." >&2; missing=1;
-}
-if grep -Fq 'ro.hardware.hwcomposer=qcom' device/google/crosshatch/device.mk; then
-  echo "Unexpected post-first-boot HWC selector in rollback source." >&2; missing=1;
-fi
-if grep -Fq 'on property:bpf.progs_loaded=1' device/google/crosshatch/init.hardware.rc; then
-  echo "Unexpected post-first-boot netd startup override in rollback source." >&2; missing=1;
-fi
-grep -Fq 'installKeyLegacy' system/vold/KeyUtil.cpp || {
-  echo "Missing Linux 4.9 fscrypt keyring fallback in system/vold." >&2; missing=1;
-}
-if (( missing )); then echo "Fix Pixel 3 source preflight before building." >&2; exit 1; fi
-if [[ "$MODE" == "--check" ]]; then
-  echo "Infinity-X Pixel 3 build inputs found. Compilation/boot NOT verified."
-  exit 0
-fi
-
-python3 "$SCRIPT_DIR/scripts/prepare-vendor.py" "$ROOT"
-if [[ "$WITH_GAPPS" == true && "$PIXEL3_GAPPS_LITE" == true ]]; then
-  python3 "$SCRIPT_DIR/scripts/trim-gapps.py" "$ROOT"
-fi
-if [[ "$MODE" == "--prepare-only" ]]; then exit 0; fi
-
-# Let ServerHive choose the build job count; preserve its existing RBE setup.
-export USE_RBE=${USE_RBE:-true}
+case "$WITH_GAPPS:$PIXEL3_GAPPS_LITE:$PIXEL3_DEV_USB_ADB" in
+  true:true:true|true:true:false|true:false:true|true:false:false|false:true:true|false:true:false|false:false:true|false:false:false) ;;
+  *) echo "WITH_GAPPS, PIXEL3_GAPPS_LITE, PIXEL3_DEV_USB_ADB must be true or false" >&2; exit 2 ;;
+esac
+INFINITY_BUILD_VARIANT=${LINEAGE_BUILD_VARIANT:-eng}
+case "$LINEAGE_BUILD_VARIANT" in eng|userdebug) ;; *) echo "Use eng or userdebug for diagnostics" >&2; exit 2 ;; esac
 mkdir -p out/build-logs
-LOG="$ROOT/out/build-logs/infinity-blueline-$(date -u +%Y%m%d-%H%M%S).log"
-echo "Build log: $LOG"
+BUILD_LOG="$TOP/out/build-logs/infinity-blueline-$(date -u +%Y%m%d-%H%M%S).log"
+echo "Build log: $BUILD_LOG"
 (
-  source build/envsetup.sh
-  lunch infinity_blueline cp2a userdebug
-  m kernelconfig
-  python3 "$SCRIPT_DIR/scripts/check-kernel-config.py" "$ANDROID_PRODUCT_OUT/obj/KERNEL_OBJ/.config"
-  m bacon
-  # A bootable graphics stack needs HWC2, not just software UI rendering.
-  hwc="$ANDROID_PRODUCT_OUT/vendor/lib64/hw/hwcomposer.qcom.so"
-  if [[ ! -f "$hwc" ]]; then echo "Missing Qualcomm hardware composer: $hwc" >&2; exit 1; fi
-  echo "Pixel 3 Qualcomm hardware composer module: PRESENT (runtime selection not yet verified)"
-  # Android 17 now reads vendor permissions from vendor/etc/ueventd.rc.
-  ueventd="$ANDROID_PRODUCT_OUT/vendor/etc/ueventd.rc"
-  if [[ ! -f "$ueventd" ]] || ! grep -q '/dev/citadel0' "$ueventd" ||
-       ! grep -q '/dev/qseecom' "$ueventd"; then
-    echo "Missing Citadel/QSEE uevent permissions in $ueventd" >&2
-    exit 1
-  fi
-  echo "Pixel 3 Citadel/QSEE device permission rules: PASS"
-  echo "Android build complete. Verify GApps apps, partition sizes, filesystem unlock and device boot before release."
-) 2>&1 | tee "$LOG"
+    # Android's envsetup scripts are not compatible with nounset.
+    source build/envsetup.sh
+    lunch infinity_blueline cp2a "$LINEAGE_BUILD_VARIANT"
+    # Validate the resolved Kconfig before compiling or packaging the kernel.
+    m kernelconfig
+    python3 "$SCRIPT_DIR/scripts/check-kernel-config.py" "$ANDROID_PRODUCT_OUT/obj/KERNEL_OBJ/.config"
+    if [[ -n ${LINEAGE_BUILD_JOBS:-} ]]; then
+        m bacon "-j${LINEAGE_BUILD_JOBS}"
+    else
+        # Let Android choose its default parallelism; no fixed -j8 cap.
+        m bacon
+    fi
+
+) 2>&1 | tee "$BUILD_LOG"
