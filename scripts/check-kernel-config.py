@@ -9,6 +9,8 @@ import sys
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("config", type=Path, help="Generated KERNEL_OBJ/.config")
+    parser.add_argument("--no-kernelsu", action="store_true",
+                        help="Validate the booted Lineage kernel without KernelSU for A/B diagnosis")
     args = parser.parse_args()
     try:
         lines = args.config.read_text(encoding="utf-8").splitlines()
@@ -24,12 +26,12 @@ def main():
         "CONFIG_SECURITY_SELINUX": "y",
         "CONFIG_DEFAULT_SECURITY_SELINUX": "y",
         "CONFIG_DEFAULT_SECURITY": '"selinux"',
-        "CONFIG_KSU": "y",
-        "CONFIG_KSU_MANUAL_HOOK": "y",
     }
+    if not args.no_kernelsu:
+        required.update({"CONFIG_KSU": "y", "CONFIG_KSU_MANUAL_HOOK": "y"})
     missing = [f"{name}={value}" for name, value in required.items() if values.get(name) != value]
     if missing:
-        print("Pixel 3 kernel cannot start Android recovery or load KernelSU Next. Required settings:", file=sys.stderr)
+        print("Pixel 3 kernel missing required boot security settings. Required settings:", file=sys.stderr)
         for setting in missing:
             print(f"  {setting}", file=sys.stderr)
         print(
@@ -39,7 +41,9 @@ def main():
         )
         return 1
 
-    print("Pixel 3 generated kernel config: SELinux, security networking and KernelSU Next manual hooks enabled.")
+    print("Pixel 3 generated kernel config: SELinux and security networking enabled; "
+          + ("Lineage boot-baseline mode (no KernelSU)." if args.no_kernelsu
+             else "KernelSU Next manual hooks enabled."))
     return 0
 
 
