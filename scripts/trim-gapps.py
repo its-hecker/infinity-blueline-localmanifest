@@ -146,9 +146,10 @@ def main() -> int:
             fragments[matches[0]] = disabled + "\n"
             text = "".join(fragments)
         elif disabled not in text:
-            print(f"Missing expected optional GApps inclusion: {name}",
-                  file=sys.stderr)
-            return 1
+            # Optional products are not necessarily inherited by every
+            # Infinity-X revision. Their absence already satisfies the
+            # minimal GApps requirement; it is not a build failure.
+            print(f"Optional Pixel {name} inclusion already absent; skipping.")
     common.write_text(text, encoding="utf-8")
 
     mk_files = sorted(gms_root.rglob("*.mk"))
