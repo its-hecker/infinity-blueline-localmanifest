@@ -24,7 +24,7 @@ export USE_RBE=${USE_RBE:-true}
 export WITH_GAPPS=${WITH_GAPPS:-true}
 export PIXEL3_GAPPS_LITE=${PIXEL3_GAPPS_LITE:-true}
 export PIXEL3_DEV_USB_ADB=${PIXEL3_DEV_USB_ADB:-true}
-export PIXEL3_FIRSTBOOT_BASELINE=${PIXEL3_FIRSTBOOT_BASELINE:-false}
+export PIXEL3_FIRSTBOOT_BASELINE=${PIXEL3_FIRSTBOOT_BASELINE:-true}
 INFINITY_BUILD_VARIANT=${INFINITY_BUILD_VARIANT:-userdebug}
 case "$WITH_GAPPS:$PIXEL3_GAPPS_LITE:$PIXEL3_DEV_USB_ADB" in
   true:true:true|true:true:false|true:false:true|true:false:false|false:true:true|false:true:false|false:false:true|false:false:false) ;;
