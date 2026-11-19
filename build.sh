@@ -100,6 +100,17 @@ echo "Build log: $BUILD_LOG"
     # Android's envsetup scripts are not compatible with nounset.
     source build/envsetup.sh
     lunch infinity_blueline cp2a "$INFINITY_BUILD_VARIANT"
+    # Minimal GMS changes remove installed packages; discard stale old product
+    # image contents once, without deleting the complete source checkout.
+    if [[ "$WITH_GAPPS" == true && "$PIXEL3_GAPPS_LITE" == true ]]; then
+        clean_stamp="$TOP/out/.infinity_blueline_lite_gms_v2_installclean"
+        if [[ ! -e "$clean_stamp" ]]; then
+            echo "Cleaning old full-GApps install artifacts once"
+            m installclean
+            mkdir -p "$(dirname "$clean_stamp")"
+            touch "$clean_stamp"
+        fi
+    fi
     # Validate the resolved Kconfig before compiling or packaging the kernel.
     m kernelconfig
     python3 "$SCRIPT_DIR/scripts/check-kernel-config.py" "$ANDROID_PRODUCT_OUT/obj/KERNEL_OBJ/.config"
