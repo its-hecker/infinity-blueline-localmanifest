@@ -2,9 +2,10 @@
 
 This port is rebased on the current **LineageOS 24.0 hardware sources**, not the
 old experimental Infinity-X port. The three mirrors are intentionally replaced,
-including deletion of old-only files. The only device-tree differences are
-`AndroidProducts.mk` and the new `infinity_blueline.mk`, which is derived
-from the original `lineage_blueline.mk` with ROM build-target substitution.
+including deletion of old-only files. On the main branch, the only device-tree differences are
+`AndroidProducts.mk` and `infinity_blueline.mk`. The diagnostic branch also
+updates `development/adb.mk` and the Infinity product's ADB setup to require
+host authentication rather than trust every attached USB computer.
 The kernel tree is now the LineageOS 24.0 boot baseline plus KernelSU Next manual hooks (no SUSFS). The vendor tree is a
 LineageOS snapshot except for removing `.lfsconfig` so blobs can be stored on GitHub LFS.
 GitHub workflow metadata is separate from ROM source.
