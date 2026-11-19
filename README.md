@@ -5,7 +5,7 @@ old experimental Infinity-X port. The three mirrors are intentionally replaced,
 including deletion of old-only files. The only device-tree differences are
 `AndroidProducts.mk` and the new `infinity_blueline.mk`, which is derived
 from the original `lineage_blueline.mk` with ROM build-target substitution.
-The kernel tree is a verbatim LineageOS snapshot. The vendor tree is a
+The kernel tree is now the LineageOS 24.0 boot baseline plus KernelSU Next manual hooks (no SUSFS). The vendor tree is a
 LineageOS snapshot except for removing `.lfsconfig` so blobs can be stored on GitHub LFS.
 GitHub workflow metadata is separate from ROM source.
 
@@ -39,9 +39,13 @@ USE_RBE=true WITH_GAPPS=true PIXEL3_GAPPS_LITE=true PIXEL3_DEV_USB_ADB=true bash
 ```
 
 GApps are **integrated**, using Infinity-X's `vendor/pixel/gms/products/gms.mk`
-while the helper omits optional Pixel ThemePicker and Pixel Sounds. The core GMS
-makefile may include more apps than Play Services and Play Store: this has not
-yet been verified to be the smallest possible GApps set.
+while the helper omits optional Pixel ThemePicker and Pixel Sounds. The GMS helper now removes optional Google app modules from makefiles while
+retaining Play services, Play Store, framework, sign-in, sync and setup packages.
+The Android 17 Pixel 3 retrofit super partition stays at its physical size:
+4,072,669,184 bytes. Verify packaged partition image sizes in the build log:
+the previous 4,562,857,984-byte image set was too large by 490,188,800 bytes.
+No successful ROM build or boot test has been performed after this change.
+KernelSU Next is checked out as a pinned kernel submodule during build.
 `WITH_GAPPS=false` builds without GApps.
 
 The local manifest matches the LineageOS 24.0 build dependencies, including

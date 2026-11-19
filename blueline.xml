@@ -4,7 +4,7 @@
   <remote name="pixel3" fetch="https://github.com/" />
 
   <project name="its-hecker/infinity-blueline-devicetree" path="device/google/crosshatch" remote="pixel3" revision="1f39489c312dd8b38539a56680d29f9a8304e505" upstream="refs/heads/main" />
-  <project name="its-hecker/infinity-blueline-kernel" path="kernel/google/msm-4.9" remote="pixel3" revision="475345fc15c6fc59e978f70e0af73076b4788d35" upstream="refs/heads/main" />
+  <project name="its-hecker/infinity-blueline-kernel" path="kernel/google/msm-4.9" remote="pixel3" revision="ba6683923947efa2c028cadd77736824d4c45e03" upstream="refs/heads/main" />
   <project name="its-hecker/infinity-blueline-vendor" path="vendor/google/blueline" remote="pixel3" revision="da5e444c8260fc1d2509ccf314d80399db54e618" upstream="refs/heads/main" />
   <project name="LineageOS/android_packages_apps_ElmyraService" path="packages/apps/ElmyraService" remote="pixel3" revision="lineage-24.0" />
 

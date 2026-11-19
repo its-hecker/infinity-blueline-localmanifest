@@ -74,6 +74,14 @@ if [[ "$MODE" == --check ]]; then
     exit 0
 fi
 
+# Repo sync does not initialize nested Git submodules. The kernel deliberately
+# pins the exact KernelSU Next commit as a real Git submodule (not latest).
+echo "Initializing pinned KernelSU Next submodule (without SUSFS)"
+git -C kernel/google/msm-4.9 submodule sync -- KernelSU
+git -C kernel/google/msm-4.9 submodule update --init KernelSU
+test -f kernel/google/msm-4.9/drivers/kernelsu/Kconfig ||
+    { echo "KernelSU Next submodule or driver symlink missing" >&2; exit 1; }
+
 python3 "$SCRIPT_DIR/scripts/prepare-camera-fd.py" "$TOP"
 python3 "$SCRIPT_DIR/scripts/prepare-camera-jni.py" "$TOP"
 python3 "$SCRIPT_DIR/scripts/prepare-vendor.py" "$TOP"
